@@ -1,0 +1,35 @@
+name: "Copy files by ssh"
+
+on:
+  pull_request:
+    branches:
+      - main
+  workflow_dispatch: # Позволяет запускать вручную кнопкой
+
+jobs:
+  deployfiles:
+    name: Deploy (files copy method)
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      - name: Remove outdated files
+        uses: appleboy/ssh-action@v1.0.3
+        with:
+          host: ${{ secrets.SSH_SERVER }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          script: |
+            rm -rf ${{ vars.WORK_DIR }}
+            mkdir -p ${{ vars.WORK_DIR }}
+
+      - name: Copy files
+        uses: appleboy/scp-action@v0.1.7
+        with:
+          host: ${{ secrets.SSH_SERVER }}
+          username: ${{ secrets.SSH_USER }}
+          key: ${{ secrets.SSH_PRIVATE_KEY }}
+          source: "."
+          target: ${{ vars.WORK_DIR }}
