@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch:
+  workflow_dispatch: # Дозволяє запускати збірку вручну кнопкою
 
 jobs:
   docker:
@@ -15,6 +15,7 @@ jobs:
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # Генеруємо метадані для Docker-образу Python додатка
       - name: Docker meta
         id: meta
         uses: docker/metadata-action@v5
@@ -23,14 +24,16 @@ jobs:
           tags: |
             type=sha
             latest
-
+      
+      # Логінимося в GitHub Container Registry
       - name: Login to GitHub Container Registry
         uses: docker/login-action@v3
         with:
           registry: ghcr.io
           username: ${{ github.actor }}
           password: ${{ secrets.GITHUB_TOKEN }}
-
+        
+      # Збираємо Docker-образ на основі Dockerfile для Python і пушимо в GHCR
       - name: Build and push Docker image
         uses: docker/build-push-action@v5
         with:
@@ -53,8 +56,10 @@ jobs:
         with:
           images: ghcr.io/${{ github.repository }}
           tags: latest
-
+        
+      # Дистанційна авторизація в Docker на сервері (ігноруємо помилку, якщо сервера немає)
       - name: Remote auth in docker registry and fill env
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_SERVER }}
@@ -65,8 +70,10 @@ jobs:
             rm -rf ${{ github.event.repository.name }}
             mkdir -p ${{ github.event.repository.name }}
             echo "GH_REGISTRY_IMAGE=${{ steps.meta.outputs.tags }}" >> ${{ github.event.repository.name }}/.env
-
+        
+      # Копіюємо файл конфігурації docker-compose.yml на сервер (ігноруємо помилку, якщо сервера немає)
       - name: Copy docker compose file
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_SERVER }}
@@ -74,8 +81,10 @@ jobs:
           key: ${{ secrets.SSH_PRIVATE_KEY }}
           source: "docker-compose.yml"
           target: ${{ github.event.repository.name }}
-
+        
+      # Перезапускаємо контейнери через Docker Compose на сервері (ігноруємо помилку, якщо сервера немає)
       - name: Stop previous docker compose file and start new
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_SERVER }}
