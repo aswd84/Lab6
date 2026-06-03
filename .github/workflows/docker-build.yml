@@ -1,0 +1,43 @@
+name: "Docker example"
+
+on:
+  push:
+    branches:
+      - main
+  workflow_dispatch: # Дозволяє запускати вручну
+
+jobs:
+  docker:
+    name: Build and push to registry
+    runs-on: ubuntu-latest
+
+    steps:
+      # 1. Клонуємо репозиторій (оновлено до v4)
+      - name: Checkout repository
+        uses: actions/checkout@v4
+
+      # 2. Формуємо метадані (назву та теги образу)
+      - name: Docker meta
+        id: meta
+        uses: docker/metadata-action@v5
+        with:
+          images: ghcr.io/${{ github.repository }}
+          tags: |
+            type=sha
+            latest
+
+      # 3. Авторизація в GitHub Container Registry (оновлено до v3)
+      - name: Login to GitHub Container Registry
+        uses: docker/login-action@v3
+        with:
+          registry: ghcr.io
+          username: ${{ github.actor }}
+          password: ${{ secrets.GITHUB_TOKEN }}
+
+      # 4. Збірка Docker-образу та його відправка в реєстр (оновлено до v5)
+      - name: Build and push Docker image
+        uses: docker/build-push-action@v5
+        with:
+          context: .
+          push: true
+          tags: ${{ steps.meta.outputs.tags }}
