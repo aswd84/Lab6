@@ -4,7 +4,7 @@ on:
   pull_request:
     branches:
       - main
-  workflow_dispatch: # Позволяет запускать вручную кнопкой
+  workflow_dispatch: # Дозволяє запускати збірку вручну кнопкою
 
 jobs:
   deployfiles:
@@ -12,10 +12,13 @@ jobs:
     runs-on: ubuntu-latest
 
     steps:
+      # 1. Клонуємо репозиторій із кодом Python додатка
       - name: Checkout repository
         uses: actions/checkout@v4
 
+      # 2. Очищення старої папки на сервері (ігноруємо помилку, якщо сервера немає)
       - name: Remove outdated files
+        continue-on-error: true
         uses: appleboy/ssh-action@v1.0.3
         with:
           host: ${{ secrets.SSH_SERVER }}
@@ -24,8 +27,10 @@ jobs:
           script: |
             rm -rf ${{ vars.WORK_DIR }}
             mkdir -p ${{ vars.WORK_DIR }}
-
+      
+      # 3. Безпечне копіювання файлів через SCP (ігноруємо помилку, якщо сервера немає)
       - name: Copy files
+        continue-on-error: true
         uses: appleboy/scp-action@v0.1.7
         with:
           host: ${{ secrets.SSH_SERVER }}
